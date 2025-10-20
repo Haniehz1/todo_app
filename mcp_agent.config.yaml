@@ -1,0 +1,6 @@
+name: todo-app
+description: A simple todo list app for ChatGPT using OpenAI Apps SDK
+execution:
+  engine: asyncio
+logging:
+  level: INFO

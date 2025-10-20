@@ -1,0 +1,11 @@
+[project]
+name = "todo-openai-app"
+version = "0.1.0"
+description = "ChatGPT Todo App with MCP Server"
+readme = "README.md"
+requires-python = ">=3.10"
+dependencies = [
+    "pydantic>=2.9.0",
+    "mcp-agent>=0.1.0",
+    "mcp>=1.0.0",
+]
