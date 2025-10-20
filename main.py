@@ -20,6 +20,7 @@ from __future__ import annotations
 
 import json
 import os
+from pathlib import Path
 import uuid
 from copy import deepcopy
 from datetime import datetime
@@ -79,8 +80,9 @@ MIME_TYPE = "text/html+skybridge"
 TEMPLATE_URI = "ui://widget/todo-list.html"
 TOOL_INVOKING_TEXT = "Rendering your latest to-dos..."
 TOOL_INVOKED_TEXT = "Todo list ready!"
-WIDGET_ASSET_BASE = os.getenv("WIDGET_ASSET_BASE", "https://<your-domain>/widget")
+WIDGET_ASSET_ROUTE = "/widget-assets"
 WIDGET_ASSET_VERSION = os.getenv("WIDGET_ASSET_VERSION", "1")
+WIDGET_DIR = Path(__file__).parent / "docs" / "widget"
 
 BASE_WIDGET_META = {
     "openai/outputTemplate": TEMPLATE_URI,
@@ -97,13 +99,13 @@ TODO_WIDGET_HTML = """
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <link rel="stylesheet" href="{CSS_URL}">
+    <link rel="stylesheet" href="{CSS_PATH}">
 </head>
 <body>
     <div id="todo-root" data-widget-version="{WIDGET_VERSION}"></div>
     <script id="todo-data" type="application/json">{{TASKS_JSON}}</script>
     <script type="module">
-        import {{ renderTodoWidget }} from "{JS_URL}";
+        import {{ renderTodoWidget }} from "{JS_PATH}";
         const dataEl = document.getElementById("todo-data");
         let payload = {{ tasks: [] }};
         try {{
@@ -120,15 +122,15 @@ TODO_WIDGET_HTML = """
 
 def _render_widget_html(tasks_data: Dict[str, Any]) -> str:
     """Render widget HTML that defers UI rendering to the hosted bundle."""
-    assets_base = WIDGET_ASSET_BASE.rstrip("/")
-    css_url = f"{assets_base}/todo.css?v={WIDGET_ASSET_VERSION}"
-    js_url = f"{assets_base}/todo.js?v={WIDGET_ASSET_VERSION}"
+    assets_base = WIDGET_ASSET_ROUTE.rstrip("/")
+    css_path = f"{assets_base}/todo.css?v={WIDGET_ASSET_VERSION}"
+    js_path = f"{assets_base}/todo.js?v={WIDGET_ASSET_VERSION}"
 
     tasks_json = json.dumps(tasks_data).replace("</", "<\\/")
 
     return TODO_WIDGET_HTML.format(
-        CSS_URL=css_url,
-        JS_URL=js_url,
+        CSS_PATH=css_path,
+        JS_PATH=js_path,
         WIDGET_VERSION=WIDGET_ASSET_VERSION,
     ).replace("{{TASKS_JSON}}", tasks_json)
 
@@ -394,5 +396,17 @@ try:
         allow_headers=["*"],
         allow_credentials=False,
     )
+except Exception:
+    pass
+
+try:
+    from starlette.staticfiles import StaticFiles
+
+    if WIDGET_DIR.exists():
+        http_app.mount(
+            WIDGET_ASSET_ROUTE,
+            StaticFiles(directory=str(WIDGET_DIR), html=True),
+            name="widget-assets",
+        )
 except Exception:
     pass
