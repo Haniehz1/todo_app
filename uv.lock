@@ -594,7 +594,7 @@ wheels = [
 
 [[package]]
 name = "mcp"
-version = "1.16.0"
+version = "1.19.0"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "anyio" },
@@ -609,14 +609,14 @@ dependencies = [
     { name = "starlette" },
     { name = "uvicorn", marker = "sys_platform != 'emscripten'" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/3d/a1/b1f328da3b153683d2ec34f849b4b6eac2790fb240e3aef06ff2fab3df9d/mcp-1.16.0.tar.gz", hash = "sha256:39b8ca25460c578ee2cdad33feeea122694cfdf73eef58bee76c42f6ef0589df", size = 472918 }
+sdist = { url = "https://files.pythonhosted.org/packages/69/2b/916852a5668f45d8787378461eaa1244876d77575ffef024483c94c0649c/mcp-1.19.0.tar.gz", hash = "sha256:213de0d3cd63f71bc08ffe9cc8d4409cc87acffd383f6195d2ce0457c021b5c1", size = 444163 }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/c9/0e/7cebc88e17daf94ebe28c95633af595ccb2864dc2ee7abd75542d98495cc/mcp-1.16.0-py3-none-any.whl", hash = "sha256:ec917be9a5d31b09ba331e1768aa576e0af45470d657a0319996a20a57d7d633", size = 167266 },
+    { url = "https://files.pythonhosted.org/packages/ce/a3/3e71a875a08b6a830b88c40bc413bff01f1650f1efe8a054b5e90a9d4f56/mcp-1.19.0-py3-none-any.whl", hash = "sha256:f5907fe1c0167255f916718f376d05f09a830a215327a3ccdd5ec8a519f2e572", size = 170105 },
 ]
 
 [[package]]
 name = "mcp-agent"
-version = "0.1.34"
+version = "0.2.3"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "aiohttp" },
@@ -635,6 +635,7 @@ dependencies = [
     { name = "pydantic" },
     { name = "pydantic-settings" },
     { name = "pydantic-yaml" },
+    { name = "python-dotenv" },
     { name = "pyyaml" },
     { name = "rich" },
     { name = "scikit-learn" },
@@ -642,9 +643,9 @@ dependencies = [
     { name = "watchdog" },
     { name = "websockets" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/48/ed/3644ebe2d830b20097ed0fef6611163e03663767b73baf95a0550bda1292/mcp_agent-0.1.34.tar.gz", hash = "sha256:46ed57d554538051709584e9318c5c394c39f54ceefc0a8118a244e06451ad68", size = 19165267 }
+sdist = { url = "https://files.pythonhosted.org/packages/92/69/c824cd82a93c6780da06c8e984fede2849d319c1bb915656219cdf1132be/mcp_agent-0.2.3.tar.gz", hash = "sha256:f0ef85649e7f5feadd292ff5dfbcd1f15ea2a7e160e026e938612ba14960c72e", size = 19816533 }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/c2/9e/724924d8ea10d758c0be9f6c794ebaa60f13a1825a593537d8dff00424a9/mcp_agent-0.1.34-py3-none-any.whl", hash = "sha256:fc9fc2ab35a8400e54346f640af463c8763415d5d80a1ec193b88389a68d3051", size = 640305 },
+    { url = "https://files.pythonhosted.org/packages/29/d0/43c5f36655269de3b2673583f21014808b96e7cdfe407f5f6b457ef436d2/mcp_agent-0.2.3-py3-none-any.whl", hash = "sha256:4132fa9d177c7a26f88727dbd8c37b38f1460a3a754317af39a7dfdaa9f913c8", size = 995159 },
 ]
 
 [[package]]
@@ -2007,7 +2008,7 @@ dependencies = [
 [package.metadata]
 requires-dist = [
     { name = "mcp", specifier = ">=1.0.0" },
-    { name = "mcp-agent", specifier = ">=0.1.0" },
+    { name = "mcp-agent", specifier = ">=0.2.3" },
     { name = "pydantic", specifier = ">=2.9.0" },
 ]
 
