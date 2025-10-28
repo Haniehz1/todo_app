@@ -18,18 +18,22 @@ Tools:
 
 from __future__ import annotations
 
+import asyncio
 import json
 import os
 from pathlib import Path
 import uuid
-from copy import deepcopy
+import uvicorn
 from datetime import datetime
 from typing import Any, Dict, List, Optional
 
+from starlette.routing import Mount
+from starlette.staticfiles import StaticFiles
 import mcp.types as types
 from mcp.server.fastmcp import FastMCP
 from pydantic import BaseModel
 from mcp_agent.app import MCPApp
+from mcp_agent.server.app_server import create_mcp_server_for_app
 
 # ------------------------------
 # Configuration
@@ -72,17 +76,25 @@ def _write_store(tasks: TaskList) -> None:
 # ------------------------------
 mcp = FastMCP(
     name="todo-app",
-    message_path="/sse/messages",
     stateless_http=True,
 )
 
+BUILD_DIR = Path(__file__).parent / "web" / "build"
+ASSETS_DIR = BUILD_DIR / "static"
+
+JS_PATH = ASSETS_DIR / "todo.js"
+CSS_PATH = ASSETS_DIR / "todo.css"
+
+TODO_JS = JS_PATH.read_text(encoding="utf-8")
+TODO_CSS = CSS_PATH.read_text(encoding="utf-8")
+
 MIME_TYPE = "text/html+skybridge"
-TEMPLATE_URI = "ui://widget/todo-list.html"
+TEMPLATE_URI = "ui://widget/todo-list-10-28-17-08.html"
 TOOL_INVOKING_TEXT = "Rendering your latest to-dos..."
 TOOL_INVOKED_TEXT = "Todo list ready!"
-WIDGET_ASSET_ROUTE = "/widget-assets"
+
 WIDGET_ASSET_VERSION = os.getenv("WIDGET_ASSET_VERSION", "1")
-WIDGET_DIR = Path(__file__).parent / "docs" / "widget"
+
 
 BASE_WIDGET_META = {
     "openai/outputTemplate": TEMPLATE_URI,
@@ -93,46 +105,27 @@ BASE_WIDGET_META = {
 }
 
 # Widget HTML
-TODO_WIDGET_HTML = """
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <link rel="stylesheet" href="{CSS_PATH}">
-</head>
-<body>
-    <div id="todo-root" data-widget-version="{WIDGET_VERSION}"></div>
-    <script id="todo-data" type="application/json">{{TASKS_JSON}}</script>
-    <script type="module">
-        import {{ renderTodoWidget }} from "{JS_PATH}";
-        const dataEl = document.getElementById("todo-data");
-        let payload = {{ tasks: [] }};
-        try {{
-            payload = JSON.parse(dataEl.textContent);
-        }} catch (error) {{
-            console.error("todo-widget: failed to parse JSON", error);
-        }}
-        const root = document.getElementById("todo-root");
-        renderTodoWidget({{ root, tasks: payload.tasks ?? [], postMessageTarget: window.parent }});
-    </script>
-</body>
-</html>
+INLINE_HTML_TEMPLATE = """
+<div id="todo-root"></div>
+<style>
+{TODO_CSS}
+</style>
+<script type="module">
+{TODO_JS}
+</script>
+<script id="todo-data" type="application/json">{TASKS_JSON}</script>
 """
 
 def _render_widget_html(tasks_data: Dict[str, Any]) -> str:
     """Render widget HTML that defers UI rendering to the hosted bundle."""
-    assets_base = WIDGET_ASSET_ROUTE.rstrip("/")
-    css_path = f"{assets_base}/todo.css?v={WIDGET_ASSET_VERSION}"
-    js_path = f"{assets_base}/todo.js?v={WIDGET_ASSET_VERSION}"
-
+   
     tasks_json = json.dumps(tasks_data).replace("</", "<\\/")
 
-    return TODO_WIDGET_HTML.format(
-        CSS_PATH=css_path,
-        JS_PATH=js_path,
-        WIDGET_VERSION=WIDGET_ASSET_VERSION,
-    ).replace("{{TASKS_JSON}}", tasks_json)
+    return INLINE_HTML_TEMPLATE.format(
+        TODO_CSS=TODO_CSS,
+        TODO_JS=TODO_JS,
+        TASKS_JSON=tasks_json,
+    )
 
 def _tool_meta() -> Dict[str, Any]:
     return {
@@ -382,31 +375,41 @@ app = MCPApp(
     mcp=mcp,
 )
 
-# ASGI app for local development
-http_app = mcp.streamable_http_app()
+async def main():
+    async with app.run() as coinflip_app:
+        mcp_server = create_mcp_server_for_app(coinflip_app)
 
-# Add CORS to the local ASGI app
-try:
-    from starlette.middleware.cors import CORSMiddleware
+        if not ASSETS_DIR.exists():
+            raise FileNotFoundError(
+                f"Assets directory not found at {ASSETS_DIR}. "
+                "Please build the web client before running the server."
+            )
 
-    http_app.add_middleware(
-        CORSMiddleware,
-        allow_origins=["*"],
-        allow_methods=["*"],
-        allow_headers=["*"],
-        allow_credentials=False,
-    )
-except Exception:
-    pass
+        starlette_app = mcp_server.sse_app()
 
-try:
-    from starlette.staticfiles import StaticFiles
-
-    if WIDGET_DIR.exists():
-        http_app.mount(
-            WIDGET_ASSET_ROUTE,
-            StaticFiles(directory=str(WIDGET_DIR), html=True),
-            name="widget-assets",
+        # This serves the static css and js files referenced by the HTML
+        starlette_app.routes.append(
+            Mount("/static", app=StaticFiles(directory=ASSETS_DIR), name="static")
         )
-except Exception:
-    pass
+
+        # This serves the main HTML file at the root path for the server
+        starlette_app.routes.append(
+            Mount(
+                "/",
+                app=StaticFiles(directory=BUILD_DIR, html=True),
+                name="root",
+            )
+        )
+
+        # Serve via uvicorn, mirroring FastMCP.run_sse_async
+        config = uvicorn.Config(
+            starlette_app,
+            host=mcp_server.settings.host,
+            port=int(mcp_server.settings.port),
+        )
+        server = uvicorn.Server(config)
+        await server.serve()
+
+
+if __name__ == "__main__":
+    asyncio.run(main())
